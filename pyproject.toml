@@ -10,6 +10,8 @@ packages = [{include = "atomic_habbits_drf"}]
 python = "^3.11"
 django = "^4.2.7"
 djangorestframework = "^3.14.0"
+psycopg2 = "^2.9.9"
+python-dotenv = "^1.0.0"
 
 
 [build-system]
