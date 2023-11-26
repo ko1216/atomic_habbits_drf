@@ -1,5 +1,4 @@
 from django.db import models
-from rest_framework.exceptions import ValidationError
 
 from users.models import User
 
@@ -21,21 +20,6 @@ class Frequency(models.TextChoices):
     weekly = 'weekly'
 
 
-def validate_related_habits_with_reward(value):
-    if value.related_habits.exists() and value.reward:
-        raise ValidationError('Cannot choose both related habits and a reward')
-
-
-def validate_related_habits_type(value):
-    if value.related_habits.filter(habit_type=HabitType.useful):
-        raise ValidationError('Related habits cannot be of type "useful"')
-
-
-def validate_pleasant_habit(value):
-    if value.habit_type == HabitType.pleasant and (value.reward.exists() or value.related_habits):
-        raise ValidationError('Pleasant habbit cannot have reward or related_habbits')
-
-
 class Habit(models.Model):
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
@@ -53,12 +37,7 @@ class Habit(models.Model):
     is_public = models.BooleanField(default=False, verbose_name='Опубликовано')
 
     def __str__(self):
-        return f'Привычка: {self.action[:20]}, принадлежит user:{self.owner}'
-
-    def clean(self):
-        validate_related_habits_with_reward(self)
-        validate_related_habits_type(self)
-        validate_pleasant_habit(self)
+        return f'Привычка: {self.action[:20]}, принадлежит user:{self.owner.tg_id}'
 
     class Meta:
         verbose_name = 'Привычка'
