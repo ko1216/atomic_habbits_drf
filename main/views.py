@@ -59,6 +59,7 @@ class HabitCreateAPIView(CreateAPIView):
 
         serializer.validated_data['related_habits'] = related_habits_ids
         habit = serializer.save()
+        habit.create_reminder_task()
 
         if related_habits_ids:
             related_habit = Habit.objects.get(id=related_habits_ids[0])

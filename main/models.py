@@ -1,6 +1,14 @@
-from django.db import models
+import json
+from datetime import timedelta, datetime
 
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import models
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+from config.settings import tg_token
 from users.models import User
+
+bot_token = tg_token
 
 NULLABLE = {'blank': True, 'null': True}
 
@@ -37,7 +45,54 @@ class Habit(models.Model):
     is_public = models.BooleanField(default=False, verbose_name='Опубликовано')
 
     def __str__(self):
-        return f'Привычка: {self.action[:20]}, принадлежит user:{self.owner.tg_id}'
+        return f'Привычка: {self.action[:20]}, принадлежит user:{self.owner.tg_username}'
+
+    def create_reminder_task(self):
+        interval = None
+
+        if self.frequency == Frequency.daily:
+            interval = 1
+        elif self.frequency == Frequency.once_every_two_days:
+            interval = 2
+        elif self.frequency == Frequency.once_every_three_days:
+            interval = 3
+        elif self.frequency == Frequency.once_every_four_days:
+            interval = 4
+        elif self.frequency == Frequency.once_every_five_days:
+            interval = 5
+        elif self.frequency == Frequency.once_every_six_days:
+            interval = 6
+        elif self.frequency == Frequency.weekly:
+            interval = 7
+
+        habit_time = self.time
+        current_date = datetime.now().date()
+
+        start_time = datetime.combine(current_date, habit_time) - timedelta(minutes=5)
+
+        interval_schedule = IntervalSchedule.objects.create(
+            every=interval,
+            period=IntervalSchedule.DAYS,
+        )
+
+        try:
+            periodic_task, created = PeriodicTask.objects.get_or_create(
+                interval=interval_schedule,
+                name=f'Reminder for habit {self.id}',
+                task='main.tasks.send_reminder',
+                args=json.dumps([bot_token, self.owner.id, self.action]),
+                start_time=start_time,
+            )
+        except ObjectDoesNotExist as e:
+            print(f"Error creating periodic task: {e}")
+            return
+
+        if not created:
+            periodic_task.enabled = False
+            periodic_task.save()
+            periodic_task.delete()
+
+            self.create_reminder_task()
 
     class Meta:
         verbose_name = 'Привычка'
