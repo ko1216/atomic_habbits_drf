@@ -7,8 +7,17 @@ from users.managers import CustomUserManager
 class User(AbstractUser):
     username = None
 
-    tg_id = models.BigIntegerField(verbose_name='Telegram_id', null=True, blank=True)
-    tg_username = models.CharField(unique=True, max_length=60, verbose_name='Ник в тг', default='some_username')
+    tg_id = models.BigIntegerField(
+        verbose_name='Telegram_id',
+        null=True,
+        blank=True
+    )
+    tg_username = models.CharField(
+        unique=True,
+        max_length=60,
+        verbose_name='Ник в тг',
+        default='some_username'
+    )
 
     USERNAME_FIELD = "tg_username"
     REQUIRED_FIELDS = []

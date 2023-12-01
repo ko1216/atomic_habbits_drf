@@ -11,6 +11,7 @@ class PublicHabitListTestCase(APITestCase):
     def setUp(self) -> None:
         self.user = User.objects.create(
             tg_id=6634345,
+            tg_username='name10'
         )
 
         self.pleasant_habit = Habit.objects.create(
@@ -132,10 +133,12 @@ class HabitListTestCase(APITestCase):
     def setUp(self) -> None:
         self.user_1 = User.objects.create(
             tg_id=6634345,
+            tg_username='name3'
         )
 
         self.user_2 = User.objects.create(
             tg_id=663434501,
+            tg_username='name4'
         )
 
         self.pleasant_habit = Habit.objects.create(
@@ -244,10 +247,12 @@ class HabitRetrieveTestCase(APITestCase):
     def setUp(self) -> None:
         self.user_1 = User.objects.create(
             tg_id=6634345,
+            tg_username='name1'
         )
 
         self.user_2 = User.objects.create(
             tg_id=663434501,
+            tg_username='name2'
         )
 
         self.pleasant_habit = Habit.objects.create(
@@ -571,3 +576,275 @@ class HabitCreateTestCase(APITestCase):
             {'duration': ['Duration must be more than 120 seconds']}
         )
 
+
+class HabitUpdateTestCase(APITestCase):
+
+    def setUp(self) -> None:
+        self.user_1 = User.objects.create(
+            tg_id=6634345,
+        )
+
+        self.user_2 = User.objects.create(
+            tg_id=6634346,
+            tg_username='user'
+        )
+
+        self.pleasant_habit = Habit.objects.create(
+            owner=self.user_1,
+            place='Дома',
+            time='12:00:00',
+            habit_type=HabitType.pleasant,
+            action='Посмотреть обучающие тиктоки',
+            duration=60,
+            is_public=True,
+        )
+
+        self.useful_habit_1 = Habit.objects.create(
+            owner=self.user_1,
+            place='Дома',
+            time='16:00:00',
+            action='Разминка',
+            duration=60,
+            is_public=True
+        )
+
+        self.useful_habit_4 = {
+            'owner': self.user_1.pk,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Упражнения',
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.useful_habit_valid_rew_relation = {
+            'owner': self.user_1.pk,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Упражнения',
+            'related_habits': [self.pleasant_habit.pk],
+            'reward': 'яблоко',
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.useful_habit_valid_with_useful_related_habit = {
+            'owner': self.user_1.pk,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Упражнения',
+            'related_habits': [self.useful_habit_1.pk],
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.pleasant_habit_valid_with_any = {
+            'owner': self.user_1.pk,
+            'habit_type': HabitType.pleasant,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Приятно',
+            'related_habits': [self.pleasant_habit.pk],
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.habit_duration_0 = {
+            'owner': self.user_1.pk,
+            'habit_type': HabitType.pleasant,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Приятно',
+            'duration': 0,
+            'is_public': True
+        }
+
+        self.habit_duration_121 = {
+            'owner': self.user_1.pk,
+            'habit_type': HabitType.pleasant,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Приятно',
+            'duration': 121,
+            'is_public': True
+        }
+
+    def test_update_by_non_authorized(self):
+        response = self.client.patch(reverse('main:habit_update', kwargs={'pk': self.useful_habit_1.pk}))
+
+        self.assertEqual(
+            response.json(),
+            {
+                'detail': 'Authentication credentials were not provided.'
+            }
+        )
+
+    def test_not_owner(self):
+        self.client.force_authenticate(user=self.user_2)
+
+        response = self.client.patch(reverse('main:habit_update', kwargs={'pk': self.useful_habit_1.pk}))
+
+        self.assertEqual(
+            response.json(),
+            {
+                "detail": "Вы не являетесь владельцем этой записи"
+            }
+        )
+
+    def test_update_by_owner(self):
+        self.client.force_authenticate(user=self.user_1)
+
+        response = self.client.patch(reverse('main:habit_update', kwargs={'pk': self.useful_habit_1.pk}),
+                                     {"place": "В другом месте"})
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK
+        )
+
+        self.assertEqual(
+            response.json(),
+            {
+                "id": 47,
+                "owner": self.user_1.id,
+                "place": "В другом месте",
+                "time": self.useful_habit_1.time,
+                "action": self.useful_habit_1.action,
+                "habit_type": 'useful',
+                "related_habits": [],
+                "reward": None,
+                "frequency": 'daily',
+                "duration": self.useful_habit_1.duration,
+                "is_public": self.useful_habit_1.is_public
+            }
+        )
+
+
+class HabitDestroyTestCase(APITestCase):
+
+    def setUp(self) -> None:
+        self.user_1 = User.objects.create(
+            tg_id=6634345,
+        )
+
+        self.user_2 = User.objects.create(
+            tg_id=6634345,
+            tg_username='test3'
+        )
+
+        self.pleasant_habit = Habit.objects.create(
+            owner=self.user_1,
+            place='Дома',
+            time='12:00:00',
+            habit_type=HabitType.pleasant,
+            action='Посмотреть обучающие тиктоки',
+            duration=60,
+            is_public=True,
+        )
+
+        self.useful_habit_1 = Habit.objects.create(
+            owner=self.user_1,
+            place='Дома',
+            time='16:00:00',
+            action='Разминка',
+            duration=60,
+            is_public=True
+        )
+
+        self.useful_habit_4 = {
+            'owner': self.user_1.pk,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Упражнения',
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.useful_habit_valid_rew_relation = {
+            'owner': self.user_1.pk,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Упражнения',
+            'related_habits': [self.pleasant_habit.pk],
+            'reward': 'яблоко',
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.useful_habit_valid_with_useful_related_habit = {
+            'owner': self.user_1.pk,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Упражнения',
+            'related_habits': [self.useful_habit_1.pk],
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.pleasant_habit_valid_with_any = {
+            'owner': self.user_1.pk,
+            'habit_type': HabitType.pleasant,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Приятно',
+            'related_habits': [self.pleasant_habit.pk],
+            'duration': 60,
+            'is_public': True
+        }
+
+        self.habit_duration_0 = {
+            'owner': self.user_1.pk,
+            'habit_type': HabitType.pleasant,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Приятно',
+            'duration': 0,
+            'is_public': True
+        }
+
+        self.habit_duration_121 = {
+            'owner': self.user_1.pk,
+            'habit_type': HabitType.pleasant,
+            'place': 'Дома',
+            'time': '16:00:00',
+            'action': 'Приятно',
+            'duration': 121,
+            'is_public': True
+        }
+
+    def test_update_by_non_authorized(self):
+        response = self.client.get(reverse('main:habit_delete', kwargs={'pk': self.useful_habit_1.pk}))
+
+        self.assertEqual(
+            response.json(),
+            {
+                'detail': 'Authentication credentials were not provided.'
+            }
+        )
+
+    def test_not_owner(self):
+        self.client.force_authenticate(user=self.user_2)
+
+        response = self.client.delete(reverse('main:habit_delete', kwargs={'pk': self.useful_habit_1.pk}))
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+        self.assertEqual(
+            response.json(),
+            {
+                "detail": "Вы не являетесь владельцем этой записи"
+            }
+        )
+
+    def test_update_by_owner(self):
+        self.client.force_authenticate(user=self.user_1)
+
+        response = self.client.delete(reverse('main:habit_delete', kwargs={'pk': self.useful_habit_1.pk}))
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_204_NO_CONTENT
+        )

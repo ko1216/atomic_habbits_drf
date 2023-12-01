@@ -12,6 +12,11 @@ class RegisterAPIView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response({
-            'user': UserSerializer(user, context=self.get_serializer_context()).data,
-            'message': 'User created successfully.  Now perform Login to get your token'
+            'user':
+                UserSerializer(
+                    user,
+                    context=self.get_serializer_context()
+                ).data,
+            'message':
+                'User created successfully. Now perform Login to get your token'
         })

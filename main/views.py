@@ -1,5 +1,9 @@
-from rest_framework import status, serializers
-from rest_framework.generics import ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView
+from rest_framework import serializers
+from rest_framework.generics import (ListAPIView,
+                                     RetrieveAPIView,
+                                     CreateAPIView,
+                                     UpdateAPIView,
+                                     DestroyAPIView)
 from rest_framework.permissions import IsAuthenticated
 
 from main.models import Habit
@@ -55,7 +59,11 @@ class HabitCreateAPIView(CreateAPIView):
 
         related_habits_ids = data.pop('related_habits', [])
         if len(related_habits_ids) > 1:
-            raise serializers.ValidationError({'error': 'You can only provide one related habit.'})
+            raise serializers.ValidationError(
+                {
+                    'error': 'You can only provide one related habit.'
+                }
+            )
 
         serializer.validated_data['related_habits'] = related_habits_ids
         habit = serializer.save()
